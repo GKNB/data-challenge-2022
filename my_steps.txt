@@ -1,0 +1,87 @@
+1). Download the latest singularity image:
+        singularity pull docker://tensorflow/tensorflow:latest-gpu
+
+    Seems like it interact with GPU on lambda1 correctly. Check that by first enter the container:
+        singularity run --nv tensorflow_latest-gpu.sif
+
+    Then run the following script:
+        python3 test_gpu.py
+        
+
+2). Turns out that we are missing many useful packages. Need to install them. First convert the .sif file into a sandbox:
+        singularity build --sandbox temp_folder tensorflow_latest-gpu.sif
+    
+    Then install packages inside the sandbox:
+        singularity shell --writable temp_folder
+        apt-get install python3-pip     //Can't remember if it is exactly this line of code
+        pip3 install <all_packages_we_need>
+
+    Finally convert the sandbox back to .sif:
+        singularity build tensorflow_latest-gpu-data-challenge.sif temp_folder
+
+    Now we can check that we have installed some of those packages correctly (inside container):
+        python3 test_package.py
+
+    and we should clean up unnecessary things including temp_folder and tensorflow_latest-gpu.sif
+
+
+3). Setup jupyter notebook for better coding environment. First install jupyter notebook as we did in step 2:
+        singularity build --sandbox temp_folder tensorflow_latest-gpu-data-challenge.sif
+        singularity shell --writable temp_folder
+        pip3 install notebook
+        C-d
+        singularity build tensorflow_latest-gpu-data-challenge-v2.sif temp_folder
+        rm -rf tensorflow_latest-gpu-data-challenge.sif temp_folder/
+
+%%  As we don't have GUI on remote machine, the next step is trying to set up a remote connection which listens to the port on remote machine which corresponds to jupyter notebook:
+        singularity run --nv tensorflow_latest-gpu-data-challenge-v2.sif
+        jupyter notebook --no-browser --port=9527   #Now port 9527 on remote machine should be listening to jupyter notebook. !!!!!Please use a different port!!!!!
+
+    This will create some message, like the following:
+        ......
+        Or copy and paste one of these URLs:
+            http://localhost:9527/?token=84ff93016c5723973ce0606761a705a69ec5e415b78321f7
+        ......
+
+    On our local machine, setup a port (port 8888) which listens to port 9527 on remote machine:
+        ssh -N -f -L localhost:8888:localhost:9527 twang@lambda1.csi.bnl.gov
+
+    Now we can open jupyter notebook on my local machine. Copy and paste the URL in browser, change remote port (9527) to local port (8888), for example, use the following link:
+        http://localhost:8888/?token=84ff93016c5723973ce0606761a705a69ec5e415b78321f7
+
+    We can now start to use jupyter notebook! I highly recommend you to use tmux to open the container and set up the url, since we need to make sure the teminal is always on.
+
+    If you are unfamiliar with tmux, below is how I use that:
+
+    tmux new -t jupyter-notebook    #create a tmux session named jupyter-notebook
+    <All command that you need, e.g., open a singularity container, launch jupyter notebook>
+    C-b d     #press ctrl and b, then release both, type d. This will take you outside tmux session
+    tmux ls   #list all tmux session we have
+    tmux a -t jupyter-notebook      #go back to tmux session named jupyter-notebook. You can just type tmux a if you just want to access the last tmux session
+
+    We can check if everything (GPU, simple-start script) works fine by running simple-start-v2.ipynb
+
+    We can check if tensorflow + keras works with GPU by running Test-tensorflow.ipynb
+
+    We can try to train a small GAN by running Test-GAN-tutorial.ipynb
+
+
+4). Warning!
+
+a). When you do:
+        tf.config.list_logical_devices('GPU')
+
+    You will see some output like
+        2022-06-27 04:59:52.816860: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1532] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 30966 MB memory:  -> device: 0, name: Quadro GV100, pci bus id: 0000:01:00.0, compute capability: 7.0
+
+    Be careful about the size of memory allocated! If two of us are both running, then the second one won't have much memory available!!! 
+    We should shut down the notebook if we are not using it. To see the memory usage, we can run nvidia-smi
+
+    
+
+5). What we can do:
+    multi-dimensional interpolation (https://docs.xarray.dev/en/stable/user-guide/interpolation.html). We can use that as a naive solution, benchmark
+
+    math operations automatically skip missing values!!!!!!!
+
+    We can convert xarray to numpy using to_numpy (https://docs.xarray.dev/en/stable/generated/xarray.DataArray.to_numpy.html)
