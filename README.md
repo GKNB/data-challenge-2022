@@ -9,7 +9,7 @@ Third step is to train/load the GAN model. The pretrained generator Model is sav
 
 ## TODO:
 
-Autoencoder:
+### Autoencoder:
 
 Summarize all the loss
 
@@ -19,7 +19,7 @@ Look at PCA performance as comparison
 
 (Should we do that?) Look at POD performance as comparison
 
-GAN:
+### GAN:
 
 Write a function which can be used to reconstuct the wind velocity field and plot it
 
