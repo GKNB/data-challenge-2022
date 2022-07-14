@@ -4,7 +4,7 @@ First step is to do data preprocessing. This can be found in data-preprocess-ae.
 
 Second step is to train/load the autoencoder model. Model are saved in either autoencoder_\<num1\>, where \<num1\> is the number of dimension of latent space, or autoencoder_18_hier_\<num2\>, where \<num2\> here represent the number of subnetwork in a hierarchcal architechture. To see how to load weights, please refer to autoencoder_72/ae-v1.ipynb, to see how I generate hierarchical autoencoder and their performance, please refer to ae-v1-backup.ipynb
 
-Third step is to train/load the GAN model. The pretrained generator Model is saved in gan_v1, while a generator/discriminator model that is badly trained is saved in gan_v2. To see how to load the pretrained generator model, or how to load the g/d model, see
+Third step is to train/load the GAN model. The pretrained generator Model is saved in gan_v1, while a generator/discriminator model that is badly trained is saved in gan_v2. To see how to load the pretrained generator model, or how to load the g/d model, see simple-start-gan-from-github-v1.ipynb. Notice since the model and checkpoint is too large, I can not upload them (don't know why they are so large?)
 
 
 ## TODO:
