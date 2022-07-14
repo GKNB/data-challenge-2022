@@ -115,17 +115,34 @@ def create_data_set_dict(list_of_data_set_path):
 		dict_of_datasets[data_set_name] = data_set_tmp
 	return deepcopy(dict_of_datasets)
 
+
+def check_IO_dict_of_datasets(dict_of_datasets, output_folder, file_format):
+	output_path_format = output_folder+file_format
+	IO_safe = True
+	for data_set_name in dict_of_datasets:
+		reopen_name = (output_path_format % data_set_name) +".nc"
+		print("Loading again DataSet: {} from {}".format(data_set_name, reopen_name))
+		dataset_reopen_tmp = xr.load_dataset(reopen_name)
+		if not dict_of_datasets[data_set_name].equals(dataset_reopen_tmp):
+			IO_safe = False
+			print("DataSet:{} is NOT IO_safe.".format(data_set_name))
+	if IO_safe == True:
+		print("DataSets:{} are all IO_safe.".format(dict_of_datasets.keys()) )
+	
+	return IO_safe 
+
 		
 def save_dict_of_datasets(dict_of_datasets, output_folder, file_format):
 	#check if the output_folder exists
 	if os.path.exists(output_folder):	
 		output_path_format = output_folder+file_format
 		for data_set_name in dict_of_datasets:
-			save_name = output_path_format % data_set_name
+			save_name = (output_path_format % data_set_name) +".nc"
 			print("Saving DataSet: {} to {}".format(data_set_name, save_name))
-			dict_of_datasets[data_set_name].to_netcdf(save_name+".nc")
+			dict_of_datasets[data_set_name].to_netcdf(save_name)
 	else:
 		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
+
 
 def data_preprocess(list_of_data_set_path, parameters):
 	dim_along = parameters["nan_dim_along"]
@@ -140,4 +157,5 @@ def data_preprocess(list_of_data_set_path, parameters):
 	else:
 		print("NAN all get removed! Saving preprocessed data!")
 		save_dict_of_datasets(dict_of_datasets, output_folder, file_format)
+		check_IO_dict_of_datasets(dict_of_datasets, output_folder, file_format)
 		return
