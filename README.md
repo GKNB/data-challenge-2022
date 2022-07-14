@@ -9,6 +9,22 @@ Third step is to train/load the GAN model. The pretrained generator Model is sav
 
 TODO:
 
+Autoencoder:
+
+Summarize all the loss
+
+Write a function which interpret the physical meaning of latent vector, maybe a reconstruct + plot function for (latent_vec_1), (latent_vec_1 + letent_vec_2), ..., and then look at their different
+
+Look at PCA performance as comparison
+
+(Should we do that?) Look at POD performance as comparison
+
+GAN:
+
+Write a function which can be used to reconstuct the wind velocity field and plot it
+
+Find some good measure indicating whether the output is good
+
 Try to use a larger alpha
 
 Try to do multiple updates\
