@@ -3,3 +3,4 @@ data_samples/
 tensorflow_latest-gpu-data-challenge-v2.sif
 processed_data/
 run.sh
+processed_data_ae/
