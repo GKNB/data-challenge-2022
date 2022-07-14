@@ -11,7 +11,7 @@ Third step is to train/load the GAN model. The pretrained generator Model is sav
 
 ### Autoencoder:
 
-Summarize all the loss
+Summarize the losses for all different architechture
 
 Write a function which interpret the physical meaning of latent vector, maybe a reconstruct + plot function for (latent_vec_1), (latent_vec_1 + letent_vec_2), ..., and then look at their different
 
