@@ -9,17 +9,17 @@ Third step is to train/load the GAN model. The pretrained generator Model is sav
 
 TODO:
 
-Try to use a larger alpha
-Try to do multiple updates
+Try to use a larger alpha\
+Try to do multiple updates\
 	https://stackoverflow.com/questions/71151303/in-a-gan-with-custom-training-loop-how-can-i-train-the-discriminator-more-times
-Try to work with multiple GPU
+Try to work with multiple GPU\
 	https://www.tensorflow.org/guide/distributed_training#use_tfdistributestrategy_with_custom_training_loops
-Need to figure out if the model is training, what the loss should look like, what is a good measure of if things are going on well
+Need to figure out if the model is training, what the loss should look like, what is a good measure of if things are going on well\
 	https://stackoverflow.com/questions/42690721/how-to-interpret-the-discriminators-loss-and-the-generators-loss-in-generative
-See if there is any other work on physics based SRGAN
-Tips for training
+See if there is any other work on physics based SRGAN\
+Tips for training\
 	https://github.com/soumith/ganhacks
 	https://medium.com/@utk.is.here/keep-calm-and-train-a-gan-pitfalls-and-tips-on-training-generative-adversarial-networks-edd529764aa9
-Maybe we should add BN layer back???
-See if we can improve the performance with the following:
+Maybe we should add BN layer back???\
+See if we can improve the performance with the following:\
 	https://www.tensorflow.org/guide/keras/writing_a_training_loop_from_scratch#end-to-end_example_a_gan_training_loop_from_scratch
