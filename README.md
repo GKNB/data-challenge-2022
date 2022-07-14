@@ -7,7 +7,7 @@ Second step is to train/load the autoencoder model. Model are saved in either au
 Third step is to train/load the GAN model. The pretrained generator Model is saved in gan_v1, while a generator/discriminator model that is badly trained is saved in gan_v2. To see how to load the pretrained generator model, or how to load the g/d model, see
 
 
-TODO:
+## TODO:
 
 Autoencoder:
 
