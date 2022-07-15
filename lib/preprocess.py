@@ -144,6 +144,74 @@ def save_dict_of_datasets(dict_of_datasets, output_folder, file_format):
 		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
 
 
+def save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, file_format, data_format):
+	#check if the output_folder exists
+	if os.path.exists(output_folder):	
+		output_path_format = output_folder+file_format+".h5"
+		with h5py.File(output_path_format, 'w') as hf:
+			for data_set_name in dict_of_std_datasets:
+				for item in dict_of_std_datasets[data_set_name]:
+					data_name = (data_format % data_set_name) + "_" + item
+					hf.create_dataset(data_name,  data=dict_of_std_datasets[data_set_name][item])
+					print("Saving data {} to h5 file {}".format(data_name, output_path_format))
+	else:
+		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
+
+
+
+
+
+def stack_data_set_datas(data_dict, stacking_data_list, stacking_tail = True):
+	if stacking_tail == True:
+		stacking_dim_idx = int(-1)
+	else:
+		stacking_dim_idx = 0
+	stacking_count = 0
+	for data_name in stacking_data_list:
+		if stacking_count == 0:
+			stacked_data = np.array(data_dict[data_name])
+		elif stacking_count > 0:
+			 stacked_data = np.stack((stacked_data, data_dict[data_name]), axis=stacking_dim_idx)
+		else:
+			print("Error! Invalid stacking_count number!")
+		stacking_count = stacking_count + 1
+	print("\tStacked {} data in data_dict: {}".format(stacking_count, stacking_data_list))	
+
+	return stacked_data
+	
+
+def standardrize_dataset_GAN(data_set, target_data_list, stacking_tail = True):
+	#get statistics
+	mean_dict = dict()	
+	stddev_dict = dict()
+	std_dict = dict()
+	for data_name in target_data_list:
+		print("\tStandardrizing data:%s" % data_name)
+		mean_dict[data_name] = data_set[data_name].mean().to_numpy()
+		stddev_dict[data_name] = data_set[data_name].std().to_numpy()
+		std_dict[data_name] = (data_set[data_name].to_numpy() - mean_dict[data_name] )\
+								 / stddev_dict[data_name]
+	print("\tStacking standardrized data: {}".format(target_data_list))	
+	std_stacked = stack_data_set_datas(std_dict, target_data_list, stacking_tail)
+	mean_stacked = stack_data_set_datas(mean_dict, target_data_list, stacking_tail)
+	stddev_stacked = stack_data_set_datas(std_dict, target_data_list, stacking_tail)
+
+	return {"std":std_stacked, "mean":mean_stacked, "stddev":stddev_stacked}
+
+
+
+def standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list):
+	dict_of_std_datasets = dict()
+	for data_set_name in target_dataset_list:
+		print("Standardrizing data set: {}".format(data_set_name))
+		dict_of_std_datasets[data_set_name] = standardrize_dataset_GAN(dict_of_datasets[data_set_name], target_data_list, stacking_tail =True)
+	return deepcopy(dict_of_std_datasets)
+
+
+
+
+
+
 def data_preprocess(list_of_data_set_path, parameters):
 	dim_along = parameters["nan_dim_along"]
 	dim_irrelevant = parameters["nan_dim_irrelevant"]
@@ -154,8 +222,17 @@ def data_preprocess(list_of_data_set_path, parameters):
 	#check if nan have been removed
 	if check_if_nan(dict_of_datasets, dim_along, dim_irrelevant):
 		print("NAN not removed! Check the data more carefully!")
+		return
 	else:
 		print("NAN all get removed! Saving preprocessed data!")
 		save_dict_of_datasets(dict_of_datasets, output_folder, file_format)
 		check_IO_dict_of_datasets(dict_of_datasets, output_folder, file_format)
-		return
+
+	#standardrize the data and save it
+	std_file_format = parameters["std_file_format"]
+	data_format = parameters["std_data_format"]
+	target_data_list = parameters["std_data_list"]
+	target_dataset_list = parameters["std_dataset_list"]
+	dict_of_std_datasets = standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list)
+	save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
+	return 
