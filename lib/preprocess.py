@@ -161,13 +161,11 @@ def save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, 
 
 
 
-def stack_data_set_datas(data_dict, stacking_data_list, stacking_tail = True):
-	if stacking_tail == True:
-		stacking_dim_idx = int(-1)
-	else:
-		stacking_dim_idx = 0
+def stack_data_set_datas(data_dict, stacking_data_list, item_name):
+	stacking_dim_idx = 0
 	stacking_count = 0
 	for data_name in stacking_data_list:
+		print("\t\tStacking data {}, {} with mean:{}, std:{}".format(data_name, item_name, data_dict[data_name].mean(), data_dict[data_name].std()))
 		if stacking_count == 0:
 			stacked_data = np.array(data_dict[data_name])
 		elif stacking_count > 0:
@@ -175,36 +173,59 @@ def stack_data_set_datas(data_dict, stacking_data_list, stacking_tail = True):
 		else:
 			print("Error! Invalid stacking_count number!")
 		stacking_count = stacking_count + 1
+	axis_idx_list = list(range(len(stacked_data.shape)))
+	del axis_idx_list[0]
+	axis_idx_list.append(0)
+	#move the first idx last
+	stacked_data_out =stacked_data.transpose(tuple(axis_idx_list))
 	print("\tStacked {} data in data_dict: {}".format(stacking_count, stacking_data_list))	
 
-	return stacked_data
+	return stacked_data_out
 	
+def check_data_shape_valid(data):
+	if len(data.shape) == 3:
+		print("shape check: PASSED. This program expect data with 3 dimensions:[time, x, y] for 2D training.")
+		return True
+	else:
+		print("Error! This program expect data with 3 dimensions:[time, x, y] for 2D.")
+		return False
 
-def standardrize_dataset_GAN(data_set, target_data_list, stacking_tail = True):
+
+def standardrize_dataset_GAN(data_set, target_data_list, stat_dim):
 	#get statistics
 	mean_dict = dict()	
 	stddev_dict = dict()
 	std_dict = dict()
 	for data_name in target_data_list:
 		print("\tStandardrizing data:%s" % data_name)
+		assert(check_data_shape_valid(data_set[data_name]))
+		# TODO: confirm the mean and std is over all dimension or only stat dimension
+		#mean_dict[data_name] = data_set[data_name].mean(dim=stat_dim).to_numpy()
+		#stddev_dict[data_name] = data_set[data_name].std(dim=stat_dim).to_numpy()
 		mean_dict[data_name] = data_set[data_name].mean().to_numpy()
 		stddev_dict[data_name] = data_set[data_name].std().to_numpy()
+
+		print("\tmean_shape:{}, stddev_shape:{}, std_shape:{}".format(mean_dict[data_name].shape, stddev_dict[data_name].shape, data_set[data_name].to_numpy().shape))
 		std_dict[data_name] = (data_set[data_name].to_numpy() - mean_dict[data_name] )\
 								 / stddev_dict[data_name]
 	print("\tStacking standardrized data: {}".format(target_data_list))	
-	std_stacked = stack_data_set_datas(std_dict, target_data_list, stacking_tail)
-	mean_stacked = stack_data_set_datas(mean_dict, target_data_list, stacking_tail)
-	stddev_stacked = stack_data_set_datas(std_dict, target_data_list, stacking_tail)
-
+	std_stacked = stack_data_set_datas(std_dict, target_data_list, "stdrzd")
+	mean_stacked = stack_data_set_datas(mean_dict, target_data_list, "mean")
+	stddev_stacked = stack_data_set_datas(std_dict, target_data_list, "std")
+	print("\tstacked: mean_shape:{}, stddev_shape:{}, std_shape:{}".format(mean_stacked.shape, stddev_stacked.shape, std_stacked.shape) )
+	axis_idx_list = list(range(len(std_stacked.shape)))
+	del axis_idx_list[-1]
+	stat_axis_tuple = tuple(axis_idx_list)
+	print("\tstacked std stat(over all other dimensions {}): mean:{}, stddev:{}".format(stat_axis_tuple, std_stacked.mean(axis=stat_axis_tuple), std_stacked.std(axis=stat_axis_tuple)) )
 	return {"std":std_stacked, "mean":mean_stacked, "stddev":stddev_stacked}
 
 
 
-def standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list):
+def standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list, stat_dim):
 	dict_of_std_datasets = dict()
 	for data_set_name in target_dataset_list:
 		print("Standardrizing data set: {}".format(data_set_name))
-		dict_of_std_datasets[data_set_name] = standardrize_dataset_GAN(dict_of_datasets[data_set_name], target_data_list, stacking_tail =True)
+		dict_of_std_datasets[data_set_name] = standardrize_dataset_GAN(dict_of_datasets[data_set_name], target_data_list, stat_dim)
 	return deepcopy(dict_of_std_datasets)
 
 
@@ -233,6 +254,7 @@ def data_preprocess(list_of_data_set_path, parameters):
 	data_format = parameters["std_data_format"]
 	target_data_list = parameters["std_data_list"]
 	target_dataset_list = parameters["std_dataset_list"]
-	dict_of_std_datasets = standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list)
+	stat_dim = parameters["stat_dim"]
+	dict_of_std_datasets = standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list, stat_dim)
 	save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
 	return 
