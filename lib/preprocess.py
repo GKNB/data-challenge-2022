@@ -157,6 +157,25 @@ def save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, 
 	else:
 		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
 
+def check_IO_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, file_format, data_format):
+	#check if the output_folder exists
+	if os.path.exists(output_folder):
+		IO_safe = True		
+		output_path_format = output_folder+file_format+".h5"
+		with h5py.File(output_path_format, 'r') as hf:
+			for data_set_name in dict_of_std_datasets:
+				for item in dict_of_std_datasets[data_set_name]:
+					data_name = (data_format % data_set_name) + "_" + item
+					original_data=dict_of_std_datasets[data_set_name][item]
+					reopen_data = hf[data_name][:]
+					if not np.array_equal(original_data,reopen_data):
+						IO_safe = False
+						print("IO check of data {} to h5 file {} FAILED".format(data_name, output_path_format))
+			if IO_safe == True:
+				print("IO check of data set:{} to h5 file {} PASSED".format(dict_of_std_datasets.keys(), output_path_format))
+			return IO_safe
+	else:
+		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
 
 
 
@@ -257,4 +276,5 @@ def data_preprocess(list_of_data_set_path, parameters):
 	stat_dim = parameters["stat_dim"]
 	dict_of_std_datasets = standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list, stat_dim)
 	save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
+	check_IO_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
 	return 
