@@ -209,6 +209,23 @@ def check_data_shape_valid(data):
 		print("Error! This program expect data with 3 dimensions:[time, x, y] for 2D.")
 		return False
 
+def check_standardrize_dataset_GAN(data_set, target_data_list, std_data_stacked, tolerance):
+	print("\tReconstruct stacked unstandardrized data!")
+	print("\t data_set_recovered = std_data[{}] * stddev[{}] + mean[{}]".format(std_data_stacked["std"].shape, std_data_stacked["stddev"].shape, std_data_stacked["mean"].shape))
+	data_set_recovered = std_data_stacked["std"] * std_data_stacked["stddev"] + std_data_stacked["mean"]
+	data_set_raw = dict()
+	for data_name in target_data_list:		
+		data_set_raw[data_name] = data_set[data_name].to_numpy()	
+	raw_stacked = stack_data_set_datas(data_set_raw, target_data_list, "raw")		
+	num_error = np.max(raw_stacked - np.array(data_set_recovered) )
+	print("\tNumerical error of standardrization is: {}".format(num_error))
+	if num_error < tolerance:
+		return True
+	else:
+		return False
+
+
+
 
 def standardrize_dataset_GAN(data_set, target_data_list, stat_dim):
 	#get statistics
@@ -218,9 +235,7 @@ def standardrize_dataset_GAN(data_set, target_data_list, stat_dim):
 	for data_name in target_data_list:
 		print("\tStandardrizing data:%s" % data_name)
 		assert(check_data_shape_valid(data_set[data_name]))
-		# TODO: confirm the mean and std is over all dimension or only stat dimension
-		#mean_dict[data_name] = data_set[data_name].mean(dim=stat_dim).to_numpy()
-		#stddev_dict[data_name] = data_set[data_name].std(dim=stat_dim).to_numpy()
+		#confirmed the mean and std is over all dimension, not only stat dimension	
 		mean_dict[data_name] = data_set[data_name].mean().to_numpy()
 		stddev_dict[data_name] = data_set[data_name].std().to_numpy()
 
@@ -230,7 +245,7 @@ def standardrize_dataset_GAN(data_set, target_data_list, stat_dim):
 	print("\tStacking standardrized data: {}".format(target_data_list))	
 	std_stacked = stack_data_set_datas(std_dict, target_data_list, "stdrzd")
 	mean_stacked = stack_data_set_datas(mean_dict, target_data_list, "mean")
-	stddev_stacked = stack_data_set_datas(std_dict, target_data_list, "std")
+	stddev_stacked = stack_data_set_datas(stddev_dict, target_data_list, "std")
 	print("\tstacked: mean_shape:{}, stddev_shape:{}, std_shape:{}".format(mean_stacked.shape, stddev_stacked.shape, std_stacked.shape) )
 	axis_idx_list = list(range(len(std_stacked.shape)))
 	del axis_idx_list[-1]
@@ -248,8 +263,16 @@ def standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, tar
 	return deepcopy(dict_of_std_datasets)
 
 
-
-
+def check_standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list, dict_of_std_datasets, tolerance):
+	std_check_passed = True
+	for data_set_name in target_dataset_list:
+		print("Checking standardrized data set: {}".format(data_set_name))
+		if not check_standardrize_dataset_GAN(dict_of_datasets[data_set_name], target_data_list, dict_of_std_datasets[data_set_name], tolerance):
+			std_check_passed = False
+			print("Standardrization check FAILED!")
+	if std_check_passed == True:
+		print("Standardrization check for standardrized data set: {}, PASSED".format(data_set_name))
+	return std_check_passed
 
 
 def data_preprocess(list_of_data_set_path, parameters):
@@ -266,7 +289,7 @@ def data_preprocess(list_of_data_set_path, parameters):
 	else:
 		print("NAN all get removed! Saving preprocessed data!")
 		save_dict_of_datasets(dict_of_datasets, output_folder, file_format)
-		check_IO_dict_of_datasets(dict_of_datasets, output_folder, file_format)
+		check_NAN_IO = check_IO_dict_of_datasets(dict_of_datasets, output_folder, file_format)
 
 	#standardrize the data and save it
 	std_file_format = parameters["std_file_format"]
@@ -274,7 +297,13 @@ def data_preprocess(list_of_data_set_path, parameters):
 	target_data_list = parameters["std_data_list"]
 	target_dataset_list = parameters["std_dataset_list"]
 	stat_dim = parameters["stat_dim"]
+	tolerance = parameters["num_error_tolerance"]
 	dict_of_std_datasets = standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list, stat_dim)
+	check_STD_GAN = check_standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, target_data_list,dict_of_std_datasets, tolerance)	
 	save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
-	check_IO_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
-	return 
+	check_STD_GAN_IO = check_IO_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, std_file_format, data_format)
+	if check_STD_GAN_IO and check_STD_GAN and check_NAN_IO:
+		print("Successfully preprocessed all the data!")
+	else:
+		print("Failed to preprocessed all the data! Check the log for errors!")	
+
