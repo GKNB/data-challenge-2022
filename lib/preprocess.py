@@ -28,10 +28,10 @@ def detect_nan_path(data_set_path):
 # Check the pattern where nan shows up
 # The pattern should be that, for a given time, we see nan on all sites for all variables dim_along
 
-def detect_nan_pattern(data_set, data_set_name, dim_along, dim_irrelevant):
+def detect_nan_pattern(data_set, data_set_name, dim_along, data_irrelevant):
 	nan_idx_list = []
 	for var_name in data_set.data_vars:
-		if var_name in dim_irrelevant:
+		if var_name in data_irrelevant:
 			continue
 		print("Checking nan pattern of variable:", var_name, " for DataSet: %s" % data_set_name)
 		mask_nan = np.isnan(data_set[var_name])
@@ -47,26 +47,26 @@ def detect_nan_pattern(data_set, data_set_name, dim_along, dim_irrelevant):
 		if not np.array_equal(nan_idx_list[i], nan_idx_list[i+1]):
 			nan_pattern_consistent = False
 	if nan_pattern_consistent == True:
-		print("NAN pattern along dimension: {}, is CONSISTENT for all other coords, with {} excluded".format(dim_along, dim_irrelevant))
+		print("NAN pattern along dimension: {}, is CONSISTENT for all other coords, with {} excluded".format(dim_along, data_irrelevant))
 		return {'nan_idx':nan_idx_list[0], 'if_consistent':nan_pattern_consistent} #only need to return one, all others are the same
 	else:
-		print("NAN pattern along dimension: {}, is NOT CONSISTENT for all other coords, with {} excluded".format(dim_along, dim_irrelevant))
+		print("NAN pattern along dimension: {}, is NOT CONSISTENT for all other coords, with {} excluded".format(dim_along, data_irrelevant))
 		return {'nan_idx':[], 'if_consistent':nan_pattern_consistent} 
 
 
-def detect_nan_pattern_path(data_set_path, dim_along, dim_irrelevant):
+def detect_nan_pattern_path(data_set_path, dim_along, data_irrelevant):
 	data_set = xr.load_dataset(data_set_path)
 	if "name" in data_set.attrs:
 		data_set_name = data_set.attrs["name"]
 	else:
 		data_set_name = data_set_path.split('/')[-1]
-	return detect_nan_pattern(data_set, data_set_name, dim_along, dim_irrelevant)	
+	return detect_nan_pattern(data_set, data_set_name, dim_along, data_irrelevant)	
 
-def find_all_nan(dict_of_datasets, dim_along, dim_irrelevant):
+def find_all_nan(dict_of_datasets, dim_along, data_irrelevant):
 	print("Searching NAN in DataSets: {}...".format(dict_of_datasets.keys()))
 	counter = 0
 	for data_set_name in dict_of_datasets:
-		nan_detect_result = detect_nan_pattern(dict_of_datasets[data_set_name], data_set_name, dim_along, dim_irrelevant)
+		nan_detect_result = detect_nan_pattern(dict_of_datasets[data_set_name], data_set_name, dim_along, data_irrelevant)
 		data_set_nan_idx = nan_detect_result['nan_idx']
 		if_nan_consistent = nan_detect_result['if_consistent']
 		if if_nan_consistent == False:
@@ -80,19 +80,19 @@ def find_all_nan(dict_of_datasets, dim_along, dim_irrelevant):
 			counter = counter + 1
 	return nan_idx_all	
 
-def check_if_nan(dict_of_datasets, dim_along, dim_irrelevant):
+def check_if_nan(dict_of_datasets, dim_along, data_irrelevant):
 	print("Checking if there's NAN in datasets:{}".format(dict_of_datasets.keys()))
-	if len(find_all_nan(dict_of_datasets, dim_along, dim_irrelevant)) == 0:
+	if len(find_all_nan(dict_of_datasets, dim_along, data_irrelevant)) == 0:
 		return False
 	else:
 		return True		
 
 
 
-def remove_nan(dict_of_datasets, dim_along, dim_irrelevant):
+def remove_nan(dict_of_datasets, dim_along, data_irrelevant):
 	print("Removing NAN indices along dimension:{}".format(dim_along))
 	print("WARNING! This will change the oringal DataSets!")
-	nan_idx_all = find_all_nan(dict_of_datasets, dim_along, dim_irrelevant)
+	nan_idx_all = find_all_nan(dict_of_datasets, dim_along, data_irrelevant)
 	print("nan indices to be removed are: {}".format(nan_idx_all)) 
 	for data_set_name in dict_of_datasets:
 		exec('dict_of_datasets[data_set_name] = dict_of_datasets[data_set_name].drop_isel(%s =nan_idx_all)'	% dim_along)
@@ -235,13 +235,13 @@ def standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_list, tar
 
 def data_preprocess(list_of_data_set_path, parameters):
 	dim_along = parameters["nan_dim_along"]
-	dim_irrelevant = parameters["nan_dim_irrelevant"]
+	data_irrelevant = parameters["nan_data_irrelevant"]
 	output_folder = parameters["output_folder"] 
 	file_format =  parameters["file_format"]
 	dict_of_datasets = create_data_set_dict(list_of_data_set_path)
-	remove_nan(dict_of_datasets, dim_along, dim_irrelevant)
+	remove_nan(dict_of_datasets, dim_along, data_irrelevant)
 	#check if nan have been removed
-	if check_if_nan(dict_of_datasets, dim_along, dim_irrelevant):
+	if check_if_nan(dict_of_datasets, dim_along, data_irrelevant):
 		print("NAN not removed! Check the data more carefully!")
 		return
 	else:
