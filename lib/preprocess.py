@@ -157,6 +157,43 @@ def save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, 
 	else:
 		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
 
+
+
+
+def load_standardrized_dict_of_datasets_h5(output_folder, file_format, keyword, exclude_list = ["stddev", "mean"]):
+	#check if the output_folder exists
+	if os.path.exists(output_folder):	
+		output_path_format = output_folder+file_format+".h5"
+		with h5py.File(output_path_format, 'r') as hf:
+			list_of_keys = list(hf.keys())
+			print("Data in file {} are: \n {}".format(output_path_format, list_of_keys) )	
+			for data_name in list_of_keys:
+				data_name_parsed = data_name.split("_")
+				print("Examining data {}".format(data_name))	
+				if keyword in data_name_parsed:
+					excluded = True
+					for exclude_term in exclude_list:
+						if exclude_term in data_name_parsed:
+							excluded = False
+					if excluded == True:
+						print("Loading data {} from file {}".format(data_name, output_path_format))
+						return np.array(hf[data_name][:])	
+			print("Data containing keyword: {}, with terms {} excluded, not found in file {}".format(keyword, exclude_list, output_path_format))	
+	else:
+		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
+
+
+def get_data_xy_from_h5(output_folder, file_format, xy_keyword_dict, exclude_list = ["stddev", "mean"]):
+	data_x = load_standardrized_dict_of_datasets_h5(output_folder, file_format, xy_keyword_dict["x"], exclude_list)
+	data_y = load_standardrized_dict_of_datasets_h5(output_folder, file_format, xy_keyword_dict["y"],exclude_list)
+	print("Got data_x with shape:{}, data_y with shape:{}".format(data_x.shape, data_y.shape))
+	return {"data_x":data_x, "data_y":data_y}
+
+
+
+
+
+
 def check_IO_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, file_format, data_format):
 	#check if the output_folder exists
 	if os.path.exists(output_folder):
@@ -273,6 +310,8 @@ def check_standardrize_dict_of_datasets_GAN(dict_of_datasets, target_dataset_lis
 	if std_check_passed == True:
 		print("Standardrization check for standardrized data set: {}, PASSED".format(data_set_name))
 	return std_check_passed
+
+
 
 
 def data_preprocess(list_of_data_set_path, parameters):
