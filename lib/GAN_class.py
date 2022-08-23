@@ -18,13 +18,56 @@ from copy import deepcopy
 
 
 class AWWSM4_SR_GAN:
-	def __init__(self, data_x, data_y, generator=generator(), discriminator=discriminator(), is_GAN=False, parameters=dict()):
+	def __init__(self, generator=generator(), discriminator=discriminator(), is_GAN=False, parameters=dict()):
 		self.gen = generator
 		print(self.gen.summary())
 		self.disc = discriminator
 		print(self.disc.summary())
 		self.is_GAN = is_GAN
 		self.parameters = deepcopy(parameters)
+		
+	def load_data():
 		self.data_x = np.array(data_x)
 		self.data_y = np.array(data_y)
+
+	
+	def load_gen_model(): 
+
+
+	def load_disc_model():
+
+
+	def save_gen_model(): #only save weights
+
+	def save_disc_model(): #only save weights
+
+
+	def compute_gen_loss():
+		if self.is_GAN == True:
+			#content loss + advers loss, return tot_loss, content_loss, adver_loss
+		elif self.is_GAN == False:
+			#only content loss
+		else:
+			print("Error Unknown GAN option!") 
+
+
+	def compute_disc_loss():
+
+
+	def set_working_mode(self, is_GAN):
+		self.is_GAN = is_GAN
+		#use keras to train simple generator is is_Gan==False
+		#use train_step to train gen/disc if is_Gan==True
+
+	def train_step() #used only with GAN
+
+
+	def train():	#used only with GAN
+
+
+	
+
+
+
+
  
