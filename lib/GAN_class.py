@@ -19,13 +19,18 @@ from copy import deepcopy
  
 
 class AWWSM4_SR_GAN:
-	def __init__(self, generator=generator(), discriminator=discriminator(), is_GAN=False, parameters=dict()):
+	def __init__(self, generator=generator(), discriminator=discriminator(), parameters=dict(), \
+					auto_run=False, is_GAN=False, doing_pretrain=False, loading_pretrain=False):
 		self.gen = generator
 		print(self.gen.summary())
 		self.disc = discriminator
-		print(self.disc.summary())
-		self.is_GAN = is_GAN
+		print(self.disc.summary())	
 		self.parameters = deepcopy(parameters)
+		self.auto_run = auto_run
+		self.is_GAN = is_GAN
+		self.doing_pretrain = doing_pretrain
+		self.loading_pretrain = loading_pretrain
+		
 		#default values: learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08
 		#generator optimizer
 		self.g_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate'], 
@@ -77,21 +82,70 @@ class AWWSM4_SR_GAN:
 	def load_disc_model(disc_model_path):
 		self.disc = tf.keras.models.load_model(disc_model_path)
 
-	def save_gen_model(gen_model_path): #only save weights
+	def save_gen_model(gen_model_path): 
 		self.gen.save(gen_model_path)
 
-	def save_disc_model(disc_model_path): #only save weights
+	def save_disc_model(disc_model_path):
 		self.disc.save(disc_model_path)
 
+	def load_gen_weights(gen_weights_path): #only load weights
+		self.gen.load_weights(gen_weights_path)
+
+	def load_disc_weights(disc_weights_path): #only load weights
+		self.disc.load_weights(disc_weights_path)
+
+
+	def save_gen_weights(gen_weights_path): #only save weights
+		self.gen.save_weights(gen_weights_path)
+
+	def save_disc_weights(disc_weights_path): #only save weights
+		self.disc.save_weights(disc_weights_path)
+
+
+
+	#Section for set working mode
+	def reset_working_mode(self, auto_run, is_GAN, doing_pretrain, loading_pretrain):
+		self.auto_run = auto_run
+		self.is_GAN = is_GAN
+		self.doing_pretrain = doing_pretrain
+		self.loading_pretrain = loading_pretrain
+
+
+	def execute_my_work_flow(self):
+		if self.auto_run == True:
+			if self.is_GAN == False:
+				if self.doing_pretrain == True: #TODO: get pretrain implemented
+					#use keras to train simple generator is is_Gan==False	
+					return self.pretrain(epochs=20)
+				else:
+					print("No work to do since to GAN and no pretrain requested.")
+			elif self.is_GAN == True:
+				if self.doing_pretrain == True:
+					self.gen = self.pretrain(epochs=20) 
+					print("Finished pretrain and start working on GAN.")
+						
+				elif self.loading_pretrain == True:
+					self.load_gen_weights(self.parameters['train']['gen_model_path'])
+					print("Loaded pretrain and start working on GAN.")
+				else:
+					print("WARNING!!!! Skip the pretrain and do the GAN directly!")	
+				#use train_step to train gen/disc if is_Gan==True and pretrain done!
+				return self.train_GAN(epochs=20)	
+		else:
+			print("Auto run not setup, stop here and run manually!")
+			return
+
+	
+	#Section for loss functions
 	def compute_gen_loss(self, x_HR, x_SR, d_SR):
 		content_loss = tf.reduce_mean((x_HR - x_SR)**2)
-		if self.is_GAN == True: #generator, High-Res and Super-Res, Distriminator Super-Res
+		if self.is_GAN == True and self.doing_pretrain == False: #generator, High-Res and Super-Res, Distriminator Super-Res
 			#content loss + advers loss, return tot_loss, content_loss, adver_loss
 			alpha_advers = self.paramters['train']['alpha_advers']	
 			g_advers_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_SR, labels=tf.ones_like(d_SR)))
 			g_loss = content_loss + alpha_advers * g_advers_loss
 			return g_loss, content_loss, g_advers_loss
-		elif self.is_GAN == False:
+		elif self.is_GAN == False or self.doing_pretrain == True:
 			#only content loss
 			return tf.reduce_mean(content_loss)
 		else:
@@ -102,11 +156,55 @@ class AWWSM4_SR_GAN:
 		return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=tf.concat([d_HR, d_SR], axis=0),
                              labels=tf.concat([tf.ones_like(d_HR), tf.zeros_like(d_SR)], axis=0)))
 
-	def set_working_mode(self, is_GAN):
-		self.is_GAN = is_GAN
-		#use keras to train simple generator is is_Gan==False
-		#use train_step to train gen/disc if is_Gan==True
-		return
+	#Section for pretrain
+	def pretrain(epochs=20):
+		'''
+		    This method trains the generator without using a disctiminator/adversarial training. 
+		    output:  generator model
+		'''
+		batch_size = self.parameters['train']['batch_size']
+		train_dataset = tf.data.Dataset.from_tensor_slices((self.x_train, self.y_train)).batch(batch_size)
+		batch_count = tf.data.experimental.cardinality(train_dataset)
+		 
+		gen_model = self.gen 
+		adam = self.g_opt
+		
+		# Start training
+		print('Training network ...')
+		for epoch in range(1, epochs+1):
+			print('Epoch: %d' %(epoch))
+			start_time = time()
+			epoch_loss, N = 0, 0
+			
+			for batch_idx, (batch_LR, batch_HR) in enumerate(train_dataset):
+				N_batch = batch_LR.shape[0]
+				
+				with tf.GradientTape() as gen_tape:
+					batch_SR = gen_model(batch_LR, training=True)
+					gen_loss = self.compute_gen_loss(batch_HR, batch_SR, None)
+				
+				grad_of_gen = gen_tape.gradient(gen_loss, gen_model.trainable_variables)
+				adam.apply_gradients(zip(grad_of_gen, gen_model.trainable_variables))
+				
+				epoch_loss += gen_loss * N_batch
+				N += N_batch
+			
+			epoch_loss = epoch_loss / N       
+			
+			val_SR = gen_model.predict(x_val, verbose=0)
+			gen_val_loss = self.compute_gen_loss(y_val, val_SR, None)
+			
+			print('Epoch generator training loss = %.6f, val loss = %6f' %(epoch_loss, gen_val_loss))
+			print('Epoch took %.2f seconds\n' %(time() - start_time), flush=True)
+			train_loss.append(epoch_loss)
+			val_loss.append(gen_val_loss)
+		
+		print('Pretrain Done.')
+		
+		return gen_model
+
+
+	#Section for Full GAN
 	@tf.function
 	def train_step_GAN(self, batch_LR, batch_HR):  #basic training step used by GAN
 		generator = self.gen
