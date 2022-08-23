@@ -26,6 +26,19 @@ class AWWSM4_SR_GAN:
 		print(self.disc.summary())
 		self.is_GAN = is_GAN
 		self.parameters = deepcopy(parameters)
+		#default values: learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08
+		#generator optimizer
+		self.g_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate'], 
+												beta_1=parameters['train']['beta_1'], 
+												beta_2=parameters['train']['beta_2'], 
+												epsilon=parameters['train']['epsilon'])
+		#discriminator optimizer
+		if self.is_GAN == True:
+			self.d_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate'], 
+												beta_1=parameters['train']['beta_1'], 
+												beta_2=parameters['train']['beta_2'], 
+												epsilon=parameters['train']['epsilon'])
+ 
 		
 	def load_data(self):
 		parameters_data = self.parameters['data']
@@ -69,12 +82,9 @@ class AWWSM4_SR_GAN:
 	def save_disc_model(): #only save weights
 		return
 
-	def compute_gen_loss(self):
-		if self.is_GAN == True:
+	def compute_gen_loss(self, x_HR, x_SR, d_SR):
+		if self.is_GAN == True: #generator, High-Res and Super-Res, Distriminator Super-Res
 			#content loss + advers loss, return tot_loss, content_loss, adver_loss
-			x_HR = self.x_HR
-			x_SR = self.x_SR
-			d_SR = self.d_SR
 			alpha_advers = self.paramters['train']['alpha_advers']
 			content_loss = tf.reduce_mean((x_HR - x_SR)**2)
 			g_advers_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_SR, labels=tf.ones_like(d_SR)))
@@ -88,9 +98,7 @@ class AWWSM4_SR_GAN:
 			print("Error Unknown GAN option!") 
 
 
-	def compute_disc_loss(self):
-		d_HR = self.d_HR
-		d_SR = self.d_SR
+	def compute_disc_loss(self, d_HR, d_SR): #discriminator, High-Res and Super-Res
 		return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=tf.concat([d_HR, d_SR], axis=0),
                              labels=tf.concat([tf.ones_like(d_HR), tf.zeros_like(d_SR)], axis=0)))
 
@@ -99,15 +107,99 @@ class AWWSM4_SR_GAN:
 		#use keras to train simple generator is is_Gan==False
 		#use train_step to train gen/disc if is_Gan==True
 		return
-	def train_step() #used only with GAN
-		return
+	@tf.function
+	def train_step_GAN(self, batch_LR, batch_HR):  #basic training step used by GAN
+		generator = self.gen
+		discriminator = self.disc
+		generator_optimizer = self.g_opt
+		discriminator_optimizer = self.d_opt
+		alpha_advers = self.paramters['train']['alpha_advers']
+		d_loss_ideal_range = [0.45, 0.65]	
+		g_reflect_max = 20  
+		d_reflect_max = 20
+		print("Using d_loss_ideal_range:{}, g_reflect_max: {}, d_reflect_max: {}"\
+								.format(d_loss_ideal_range, g_reflect_max, d_reflect_max)) 
+		#Tianle's code started here
+		g_count = 0
+		d_loss = tf.constant(0.0)
+		d_HR = discriminator(batch_HR, training=False)
+		while(d_loss < tf.constant(d_loss_ideal_range[0]) and g_count < g_reflect_max):
+			g_count += 1
+			with tf.GradientTape() as gen_tape:
+				batch_SR = generator(batch_LR, training=True)
+				d_SR = discriminator(batch_SR, training=False)
+				g_loss, content_loss, g_advers_loss = generator_loss(batch_HR, batch_SR, d_SR, alpha_advers=alpha_advers)
+			
+			grad_of_gen = gen_tape.gradient(g_loss, generator.trainable_variables)
+			generator_optimizer.apply_gradients(zip(grad_of_gen, generator.trainable_variables))
+			d_loss = discriminator_loss(d_HR, d_SR)
+		
+		d_count = 0
+		d_loss = tf.constant(100.0)
+		while(d_loss > tf.constant(d_loss_ideal_range[-1]) and d_count < d_reflect_max):
+			d_count += 1
+			with tf.GradientTape() as disc_tape:
+				batch_SR = generator(batch_LR, training=False)
+				d_HR = discriminator(batch_HR, training=True)
+				d_SR = discriminator(batch_SR, training=True)
+				d_loss = discriminator_loss(d_HR, d_SR)
+			
+			grad_of_disc = disc_tape.gradient(d_loss, discriminator.trainable_variables)
+			discriminator_optimizer.apply_gradients(zip(grad_of_disc, discriminator.trainable_variables))
+		    
+		return g_loss, d_loss, g_count, d_count
 
-	def train():	#used only with GAN
-		return
 
+	def train_GAN(self, epochs=20):	#used only with GAN
+		gen_model = self.gen
+		disc_model = self.disc
+		batch_size = self.parameters['train']['batch_size']
+		alpha_advers = self.parameters['train']['alpha_advers']
+		'''
+		This method trains the generator and disctiminator adversarially
+		Notice the two model should be the input of this function
+		output: trained generator model and discriminator model
+		'''
+		train_dataset = tf.data.Dataset.from_tensor_slices((self.x_train, self.y_train)).batch(batch_size)
+		batch_count = tf.data.experimental.cardinality(train_dataset)
+		
+		g_opt = self.g_opt
+		d_opt = self.d_opt	
+		
+		# Start training
+	print('Training network ...')
+	for epoch in range(1, epochs+1):
+		print('Epoch: %d' %(epoch))
+		start_time = time()
+		epoch_g_loss, epoch_d_loss, N, g_count_tot, d_count_tot = 0, 0, 0, 0, 0
+		
+		for batch_idx, (batch_LR, batch_HR) in enumerate(train_dataset):
+			N_batch = batch_LR.shape[0]
+			g_loss, d_loss, g_count, d_count \
+			    = self.train_step_GAN(batch_LR)  #modified by Bigeng
+			
+			epoch_g_loss += g_loss * N_batch
+			epoch_d_loss += d_loss * N_batch
+			N += N_batch
+			g_count_tot += g_count
+			d_count_tot += d_count
+		
+		epoch_g_loss = epoch_g_loss / N       
+		epoch_d_loss = epoch_d_loss / N       
+		
+		val_SR = gen_model.predict(x_val, verbose=0)
+		val_d_HR = disc_model.predict(y_val, verbose=0)
+		val_d_SR = disc_model.predict(val_SR, verbose=0)
+		
+		val_g_loss, val_content_loss, val_advers_loss = generator_loss(y_val, val_SR, val_d_SR, alpha_advers)
+		val_d_loss = discriminator_loss(val_d_HR, val_d_SR)
+		
+		print('Epoch generator loss = %.6f, discriminator loss = %.6f, g_count = %d, d_count = %d' %(epoch_g_loss, epoch_d_loss, g_count_tot, d_count_tot))
+		print('Epoch val: g_loss = %.6f, d_loss = %.6f, content_loss = %.6f, advers_loss = %.6f' \
+		      %(val_g_loss, val_d_loss, val_content_loss, val_advers_loss))
+		print('Epoch took %.2f seconds\n' %(time() - start_time), flush=True)
 	
-
-
-
-
+	print('Done.')
+	
+	return gen_model, disc_model
  
