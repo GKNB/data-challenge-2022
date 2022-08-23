@@ -167,39 +167,39 @@ class AWWSM4_SR_GAN:
 		d_opt = self.d_opt	
 		
 		# Start training
-	print('Training network ...')
-	for epoch in range(1, epochs+1):
-		print('Epoch: %d' %(epoch))
-		start_time = time()
-		epoch_g_loss, epoch_d_loss, N, g_count_tot, d_count_tot = 0, 0, 0, 0, 0
-		
-		for batch_idx, (batch_LR, batch_HR) in enumerate(train_dataset):
-			N_batch = batch_LR.shape[0]
-			g_loss, d_loss, g_count, d_count \
-			    = self.train_step_GAN(batch_LR)  #modified by Bigeng
+		print('Training network ...')
+		for epoch in range(1, epochs+1):
+			print('Epoch: %d' %(epoch))
+			start_time = time()
+			epoch_g_loss, epoch_d_loss, N, g_count_tot, d_count_tot = 0, 0, 0, 0, 0
 			
-			epoch_g_loss += g_loss * N_batch
-			epoch_d_loss += d_loss * N_batch
-			N += N_batch
-			g_count_tot += g_count
-			d_count_tot += d_count
+			for batch_idx, (batch_LR, batch_HR) in enumerate(train_dataset):
+				N_batch = batch_LR.shape[0]
+				g_loss, d_loss, g_count, d_count \
+				    = self.train_step_GAN(batch_LR)  #modified by Bigeng
+				
+				epoch_g_loss += g_loss * N_batch
+				epoch_d_loss += d_loss * N_batch
+				N += N_batch
+				g_count_tot += g_count
+				d_count_tot += d_count
+			
+			epoch_g_loss = epoch_g_loss / N       
+			epoch_d_loss = epoch_d_loss / N       
+			
+			val_SR = gen_model.predict(x_val, verbose=0)
+			val_d_HR = disc_model.predict(y_val, verbose=0)
+			val_d_SR = disc_model.predict(val_SR, verbose=0)
+			
+			val_g_loss, val_content_loss, val_advers_loss = generator_loss(y_val, val_SR, val_d_SR, alpha_advers)
+			val_d_loss = discriminator_loss(val_d_HR, val_d_SR)
+			
+			print('Epoch generator loss = %.6f, discriminator loss = %.6f, g_count = %d, d_count = %d' %(epoch_g_loss, epoch_d_loss, g_count_tot, d_count_tot))
+			print('Epoch val: g_loss = %.6f, d_loss = %.6f, content_loss = %.6f, advers_loss = %.6f' \
+			      %(val_g_loss, val_d_loss, val_content_loss, val_advers_loss))
+			print('Epoch took %.2f seconds\n' %(time() - start_time), flush=True)
 		
-		epoch_g_loss = epoch_g_loss / N       
-		epoch_d_loss = epoch_d_loss / N       
+		print('Done.')
 		
-		val_SR = gen_model.predict(x_val, verbose=0)
-		val_d_HR = disc_model.predict(y_val, verbose=0)
-		val_d_SR = disc_model.predict(val_SR, verbose=0)
-		
-		val_g_loss, val_content_loss, val_advers_loss = generator_loss(y_val, val_SR, val_d_SR, alpha_advers)
-		val_d_loss = discriminator_loss(val_d_HR, val_d_SR)
-		
-		print('Epoch generator loss = %.6f, discriminator loss = %.6f, g_count = %d, d_count = %d' %(epoch_g_loss, epoch_d_loss, g_count_tot, d_count_tot))
-		print('Epoch val: g_loss = %.6f, d_loss = %.6f, content_loss = %.6f, advers_loss = %.6f' \
-		      %(val_g_loss, val_d_loss, val_content_loss, val_advers_loss))
-		print('Epoch took %.2f seconds\n' %(time() - start_time), flush=True)
-	
-	print('Done.')
-	
-	return gen_model, disc_model
+		return gen_model, disc_model
  
