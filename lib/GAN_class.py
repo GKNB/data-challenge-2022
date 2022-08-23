@@ -71,29 +71,29 @@ class AWWSM4_SR_GAN:
 		print(np.max(self.x_train), np.max(self.x_val), np.max(self.x_test), np.min(self.x_train), np.min(self.x_val), np.min(self.x_test))
 		print(np.max(self.y_train), np.max(self.y_val), np.max(self.y_test), np.min(self.y_train), np.min(self.y_val), np.min(self.y_test))
 	
-	def load_gen_model(): 
-		return
+	def load_gen_model(gen_model_path):
+		self.gen = tf.keras.models.load_model(gen_model_path) 
 
-	def load_disc_model():
-		return
+	def load_disc_model(disc_model_path):
+		self.disc = tf.keras.models.load_model(disc_model_path)
 
-	def save_gen_model(): #only save weights
-		return
-	def save_disc_model(): #only save weights
-		return
+	def save_gen_model(gen_model_path): #only save weights
+		self.gen.save(gen_model_path)
+
+	def save_disc_model(disc_model_path): #only save weights
+		self.disc.save(disc_model_path)
 
 	def compute_gen_loss(self, x_HR, x_SR, d_SR):
+		content_loss = tf.reduce_mean((x_HR - x_SR)**2)
 		if self.is_GAN == True: #generator, High-Res and Super-Res, Distriminator Super-Res
 			#content loss + advers loss, return tot_loss, content_loss, adver_loss
-			alpha_advers = self.paramters['train']['alpha_advers']
-			content_loss = tf.reduce_mean((x_HR - x_SR)**2)
+			alpha_advers = self.paramters['train']['alpha_advers']	
 			g_advers_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_SR, labels=tf.ones_like(d_SR)))
 			g_loss = content_loss + alpha_advers * g_advers_loss
 			return g_loss, content_loss, g_advers_loss
 		elif self.is_GAN == False:
-			print("Currently not implemented!")
 			#only content loss
-			return
+			return tf.reduce_mean(content_loss)
 		else:
 			print("Error Unknown GAN option!") 
 
@@ -128,11 +128,11 @@ class AWWSM4_SR_GAN:
 			with tf.GradientTape() as gen_tape:
 				batch_SR = generator(batch_LR, training=True)
 				d_SR = discriminator(batch_SR, training=False)
-				g_loss, content_loss, g_advers_loss = generator_loss(batch_HR, batch_SR, d_SR, alpha_advers=alpha_advers)
+				g_loss, content_loss, g_advers_loss = self.compute_gen_loss(batch_HR, batch_SR, d_SR)
 			
 			grad_of_gen = gen_tape.gradient(g_loss, generator.trainable_variables)
 			generator_optimizer.apply_gradients(zip(grad_of_gen, generator.trainable_variables))
-			d_loss = discriminator_loss(d_HR, d_SR)
+			d_loss = self.compute_disc_loss(d_HR, d_SR)
 		
 		d_count = 0
 		d_loss = tf.constant(100.0)
@@ -142,7 +142,7 @@ class AWWSM4_SR_GAN:
 				batch_SR = generator(batch_LR, training=False)
 				d_HR = discriminator(batch_HR, training=True)
 				d_SR = discriminator(batch_SR, training=True)
-				d_loss = discriminator_loss(d_HR, d_SR)
+				d_loss = self.compute_disc_loss(d_HR, d_SR)
 			
 			grad_of_disc = disc_tape.gradient(d_loss, discriminator.trainable_variables)
 			discriminator_optimizer.apply_gradients(zip(grad_of_disc, discriminator.trainable_variables))
@@ -191,8 +191,8 @@ class AWWSM4_SR_GAN:
 			val_d_HR = disc_model.predict(y_val, verbose=0)
 			val_d_SR = disc_model.predict(val_SR, verbose=0)
 			
-			val_g_loss, val_content_loss, val_advers_loss = generator_loss(y_val, val_SR, val_d_SR, alpha_advers)
-			val_d_loss = discriminator_loss(val_d_HR, val_d_SR)
+			val_g_loss, val_content_loss, val_advers_loss = self.compute_gen_loss(y_val, val_SR, val_d_SR)
+			val_d_loss = self.compute_disc_loss(val_d_HR, val_d_SR)
 			
 			print('Epoch generator loss = %.6f, discriminator loss = %.6f, g_count = %d, d_count = %d' %(epoch_g_loss, epoch_d_loss, g_count_tot, d_count_tot))
 			print('Epoch val: g_loss = %.6f, d_loss = %.6f, content_loss = %.6f, advers_loss = %.6f' \
