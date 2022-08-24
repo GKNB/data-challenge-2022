@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import h5py
+from time import time
 
 import matplotlib.pyplot as plt
 
@@ -30,6 +31,8 @@ class AWWSM4_SR_GAN:
 		self.is_GAN = is_GAN
 		self.doing_pretrain = doing_pretrain
 		self.loading_pretrain = loading_pretrain
+		self.pretrain_train_loss = []
+		self.pretrain_val_loss = []
 		
 		#default values: learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08
 		#generator optimizer
@@ -51,8 +54,8 @@ class AWWSM4_SR_GAN:
 							parameters_data['file_format'], 
 							parameters_data['xy_keyword_dict'], 
 							parameters_data['xy_exclude_list'])
-		self.data_x = np.array(data_xy_dict['x'])
-		self.data_y = np.array(data_xy_dict['y'])
+		self.data_x = np.array(data_xy_dict['data_x'])
+		self.data_y = np.array(data_xy_dict['data_y'])
 
 
 	def split_data(self, test_set_ratio=0.2, val_set_subratio=0.25,rdm_state=42):
@@ -76,29 +79,29 @@ class AWWSM4_SR_GAN:
 		print(np.max(self.x_train), np.max(self.x_val), np.max(self.x_test), np.min(self.x_train), np.min(self.x_val), np.min(self.x_test))
 		print(np.max(self.y_train), np.max(self.y_val), np.max(self.y_test), np.min(self.y_train), np.min(self.y_val), np.min(self.y_test))
 	
-	def load_gen_model(gen_model_path):
+	def load_gen_model(self, gen_model_path):
 		self.gen = tf.keras.models.load_model(gen_model_path) 
 
-	def load_disc_model(disc_model_path):
+	def load_disc_model(self, disc_model_path):
 		self.disc = tf.keras.models.load_model(disc_model_path)
 
-	def save_gen_model(gen_model_path): 
+	def save_gen_model(self, gen_model_path): 
 		self.gen.save(gen_model_path)
 
-	def save_disc_model(disc_model_path):
+	def save_disc_model(self, disc_model_path):
 		self.disc.save(disc_model_path)
 
-	def load_gen_weights(gen_weights_path): #only load weights
+	def load_gen_weights(self, gen_weights_path): #only load weights
 		self.gen.load_weights(gen_weights_path)
 
-	def load_disc_weights(disc_weights_path): #only load weights
+	def load_disc_weights(self, disc_weights_path): #only load weights
 		self.disc.load_weights(disc_weights_path)
 
 
-	def save_gen_weights(gen_weights_path): #only save weights
+	def save_gen_weights(self, gen_weights_path): #only save weights
 		self.gen.save_weights(gen_weights_path)
 
-	def save_disc_weights(disc_weights_path): #only save weights
+	def save_disc_weights(self, disc_weights_path): #only save weights
 		self.disc.save_weights(disc_weights_path)
 
 
@@ -157,11 +160,13 @@ class AWWSM4_SR_GAN:
                              labels=tf.concat([tf.ones_like(d_HR), tf.zeros_like(d_SR)], axis=0)))
 
 	#Section for pretrain
-	def pretrain(epochs=20):
+	def pretrain(self, epochs=20):
 		'''
 		    This method trains the generator without using a disctiminator/adversarial training. 
 		    output:  generator model
 		'''
+		self.pretrain_train_loss = []
+		self.pretrain_val_loss = []
 		batch_size = self.parameters['train']['batch_size']
 		train_dataset = tf.data.Dataset.from_tensor_slices((self.x_train, self.y_train)).batch(batch_size)
 		batch_count = tf.data.experimental.cardinality(train_dataset)
@@ -191,13 +196,13 @@ class AWWSM4_SR_GAN:
 			
 			epoch_loss = epoch_loss / N       
 			
-			val_SR = gen_model.predict(x_val, verbose=0)
-			gen_val_loss = self.compute_gen_loss(y_val, val_SR, None)
+			val_SR = gen_model.predict(self.x_val, verbose=0)
+			gen_val_loss = self.compute_gen_loss(self.y_val, val_SR, None)
 			
 			print('Epoch generator training loss = %.6f, val loss = %6f' %(epoch_loss, gen_val_loss))
 			print('Epoch took %.2f seconds\n' %(time() - start_time), flush=True)
-			train_loss.append(epoch_loss)
-			val_loss.append(gen_val_loss)
+			self.pretrain_train_loss.append(epoch_loss)
+			self.pretrain_val_loss.append(gen_val_loss)
 		
 		print('Pretrain Done.')
 		
@@ -207,6 +212,7 @@ class AWWSM4_SR_GAN:
 	#Section for Full GAN
 	@tf.function
 	def train_step_GAN(self, batch_LR, batch_HR):  #basic training step used by GAN
+		#print("DEBUG: Step 1")            
 		generator = self.gen
 		discriminator = self.disc
 		generator_optimizer = self.g_opt
@@ -221,17 +227,21 @@ class AWWSM4_SR_GAN:
 		g_count = 0
 		d_loss = tf.constant(0.0)
 		d_HR = discriminator(batch_HR, training=False)
+		#print("DEBUG: Step 2")            
 		while(d_loss < tf.constant(d_loss_ideal_range[0]) and g_count < g_reflect_max):
 			g_count += 1
 			with tf.GradientTape() as gen_tape:
+				#print("DEBUG: Step 3")                  
 				batch_SR = generator(batch_LR, training=True)
 				d_SR = discriminator(batch_SR, training=False)
+				#print("DEBUG: Step 4")                      
 				g_loss, content_loss, g_advers_loss = self.compute_gen_loss(batch_HR, batch_SR, d_SR)
 			
 			grad_of_gen = gen_tape.gradient(g_loss, generator.trainable_variables)
 			generator_optimizer.apply_gradients(zip(grad_of_gen, generator.trainable_variables))
 			d_loss = self.compute_disc_loss(d_HR, d_SR)
 		
+		#print("DEBUG: Step 5")     
 		d_count = 0
 		d_loss = tf.constant(100.0)
 		while(d_loss > tf.constant(d_loss_ideal_range[-1]) and d_count < d_reflect_max):
@@ -244,7 +254,7 @@ class AWWSM4_SR_GAN:
 			
 			grad_of_disc = disc_tape.gradient(d_loss, discriminator.trainable_variables)
 			discriminator_optimizer.apply_gradients(zip(grad_of_disc, discriminator.trainable_variables))
-		    
+		#print("DEBUG: Step 6")     
 		return g_loss, d_loss, g_count, d_count
 
 
@@ -271,7 +281,7 @@ class AWWSM4_SR_GAN:
 			for batch_idx, (batch_LR, batch_HR) in enumerate(train_dataset):
 				N_batch = batch_LR.shape[0]
 				g_loss, d_loss, g_count, d_count \
-				    = self.train_step_GAN(batch_LR)  #modified by Bigeng
+				    = self.train_step_GAN(batch_LR, batch_HR)  #modified by Bigeng
 				
 				epoch_g_loss += g_loss * N_batch
 				epoch_d_loss += d_loss * N_batch
@@ -282,11 +292,11 @@ class AWWSM4_SR_GAN:
 			epoch_g_loss = epoch_g_loss / N       
 			epoch_d_loss = epoch_d_loss / N       
 			
-			val_SR = gen_model.predict(x_val, verbose=0)
-			val_d_HR = disc_model.predict(y_val, verbose=0)
+			val_SR = gen_model.predict(self.x_val, verbose=0)
+			val_d_HR = disc_model.predict(self.y_val, verbose=0)
 			val_d_SR = disc_model.predict(val_SR, verbose=0)
 			
-			val_g_loss, val_content_loss, val_advers_loss = self.compute_gen_loss(y_val, val_SR, val_d_SR)
+			val_g_loss, val_content_loss, val_advers_loss = self.compute_gen_loss(self.y_val, val_SR, val_d_SR)
 			val_d_loss = self.compute_disc_loss(val_d_HR, val_d_SR)
 			
 			print('Epoch generator loss = %.6f, discriminator loss = %.6f, g_count = %d, d_count = %d' %(epoch_g_loss, epoch_d_loss, g_count_tot, d_count_tot))
