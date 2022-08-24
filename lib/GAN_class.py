@@ -33,13 +33,13 @@ class AWWSM4_SR_GAN:
 		
 		#default values: learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08
 		#generator optimizer
-		self.g_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate'], 
+		self.g_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate_g'],
 												beta_1=parameters['train']['beta_1'], 
 												beta_2=parameters['train']['beta_2'], 
 												epsilon=parameters['train']['epsilon'])
 		#discriminator optimizer
 		if self.is_GAN == True:
-			self.d_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate'], 
+			self.d_opt = tf.keras.optimizers.Adam(learning_rate=parameters['train']['learning_rate_d'], 
 												beta_1=parameters['train']['beta_1'], 
 												beta_2=parameters['train']['beta_2'], 
 												epsilon=parameters['train']['epsilon'])
@@ -141,7 +141,7 @@ class AWWSM4_SR_GAN:
 		content_loss = tf.reduce_mean((x_HR - x_SR)**2)
 		if self.is_GAN == True and self.doing_pretrain == False: #generator, High-Res and Super-Res, Distriminator Super-Res
 			#content loss + advers loss, return tot_loss, content_loss, adver_loss
-			alpha_advers = self.paramters['train']['alpha_advers']	
+			alpha_advers = self.parameters['train']['alpha_advers']	
 			g_advers_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=d_SR, labels=tf.ones_like(d_SR)))
 			g_loss = content_loss + alpha_advers * g_advers_loss
 			return g_loss, content_loss, g_advers_loss
@@ -211,7 +211,7 @@ class AWWSM4_SR_GAN:
 		discriminator = self.disc
 		generator_optimizer = self.g_opt
 		discriminator_optimizer = self.d_opt
-		alpha_advers = self.paramters['train']['alpha_advers']
+		alpha_advers = self.parameters['train']['alpha_advers']
 		d_loss_ideal_range = [0.45, 0.65]	
 		g_reflect_max = 20  
 		d_reflect_max = 20
@@ -260,9 +260,6 @@ class AWWSM4_SR_GAN:
 		'''
 		train_dataset = tf.data.Dataset.from_tensor_slices((self.x_train, self.y_train)).batch(batch_size)
 		batch_count = tf.data.experimental.cardinality(train_dataset)
-		
-		g_opt = self.g_opt
-		d_opt = self.d_opt	
 		
 		# Start training
 		print('Training network ...')
