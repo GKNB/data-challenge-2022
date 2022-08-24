@@ -129,49 +129,6 @@ def discriminator(input_shape = (192, 192, 2)):
 
 
 
-def pretrain(data_x, data_y, parameters):
-	#First split data into train+validation and test set
-	x_train, x_test, y_train, y_test = train_test_split(data_x, data_y, test_size=0.2, random_state=42)
-	
-	#Next split training again into train and validation
-	x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, test_size=0.25, random_state=42)
-	
-	print(x_train.shape)
-	print(x_val.shape)
-	print(x_test.shape)
-	
-	print(y_train.shape)
-	print(y_val.shape)
-	print(y_test.shape)
-	
-	print(np.max(x_train), np.max(x_val), np.max(x_test), np.min(x_train), np.min(x_val), np.min(x_test))
-	print(np.max(y_train), np.max(y_val), np.max(y_test), np.min(y_train), np.min(y_val), np.min(y_test))	
-	#create generator model
-	generator_model = generator(input_shape = (96, 96, 2))
-	print(generator_model.summary())
-	
-	#First do pretrain generator for better convergence
-
-	adam = tf.keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-	generator_model.compile(optimizer=adam, loss=losses.MeanSquaredError())
-	
-	logdir = parameters["output_folder"] + datetime.now().strftime("%Y%m%d-%H%M%S")
-	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
-	
-	checkpoint_filepath = parameters["checkpoint_filepath"]
-	model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,\
-																	save_weights_only=True,\
-																	save_freq=10*40)
-	training_history = generator_model.fit(x_train, y_train,
-											batch_size=128,\
-											epochs=1000,\
-											shuffle=True,\
-											validation_data=(x_val, y_val),\
-											callbacks=[tensorboard_callback,\
-											 model_checkpoint_callback])
-	generator_model.evaluate(x_test, y_test)			
-
-
 
 
 
