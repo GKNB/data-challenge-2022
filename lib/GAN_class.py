@@ -117,7 +117,7 @@ class AWWSM4_SR_GAN:
 	def execute_my_work_flow(self):
 		if self.auto_run == True:
 			if self.is_GAN == False:
-				if self.doing_pretrain == True: #TODO: get pretrain implemented
+				if self.doing_pretrain == True: 
 					#use keras to train simple generator is is_Gan==False	
 					return self.pretrain(epochs=20)
 				else:
@@ -211,8 +211,7 @@ class AWWSM4_SR_GAN:
 
 	#Section for Full GAN
 	@tf.function
-	def train_step_GAN(self, batch_LR, batch_HR):  #basic training step used by GAN
-		#print("DEBUG: Step 1")            
+	def train_step_GAN(self, batch_LR, batch_HR):  #basic training step used by GAN    
 		generator = self.gen
 		discriminator = self.disc
 		generator_optimizer = self.g_opt
@@ -227,21 +226,17 @@ class AWWSM4_SR_GAN:
 		g_count = 0
 		d_loss = tf.constant(0.0)
 		d_HR = discriminator(batch_HR, training=False)
-		#print("DEBUG: Step 2")            
 		while(d_loss < tf.constant(d_loss_ideal_range[0]) and g_count < g_reflect_max):
 			g_count += 1
-			with tf.GradientTape() as gen_tape:
-				#print("DEBUG: Step 3")                  
+			with tf.GradientTape() as gen_tape:   
 				batch_SR = generator(batch_LR, training=True)
-				d_SR = discriminator(batch_SR, training=False)
-				#print("DEBUG: Step 4")                      
+				d_SR = discriminator(batch_SR, training=False)              
 				g_loss, content_loss, g_advers_loss = self.compute_gen_loss(batch_HR, batch_SR, d_SR)
 			
 			grad_of_gen = gen_tape.gradient(g_loss, generator.trainable_variables)
 			generator_optimizer.apply_gradients(zip(grad_of_gen, generator.trainable_variables))
 			d_loss = self.compute_disc_loss(d_HR, d_SR)
 		
-		#print("DEBUG: Step 5")     
 		d_count = 0
 		d_loss = tf.constant(100.0)
 		while(d_loss > tf.constant(d_loss_ideal_range[-1]) and d_count < d_reflect_max):
@@ -253,8 +248,7 @@ class AWWSM4_SR_GAN:
 				d_loss = self.compute_disc_loss(d_HR, d_SR)
 			
 			grad_of_disc = disc_tape.gradient(d_loss, discriminator.trainable_variables)
-			discriminator_optimizer.apply_gradients(zip(grad_of_disc, discriminator.trainable_variables))
-		#print("DEBUG: Step 6")     
+			discriminator_optimizer.apply_gradients(zip(grad_of_disc, discriminator.trainable_variables))     
 		return g_loss, d_loss, g_count, d_count
 
 
