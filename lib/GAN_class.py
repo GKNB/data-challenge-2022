@@ -107,33 +107,58 @@ class AWWSM4_SR_GAN:
 
 
 	#Section for set working mode
-	def reset_working_mode(self, auto_run, is_GAN, doing_pretrain, loading_pretrain):
+	def reset_working_mode(self, auto_run=self.auto_run, \
+								is_GAN=self.is_GAN, \
+								doing_pretrain=self.doing_pretrain, \
+								loading_pretrain=self.loading_pretrain):
+		print("Reset the working mode!")
+		print("Working mode before reset:")
+		self.print_working_mode()
 		self.auto_run = auto_run
 		self.is_GAN = is_GAN
 		self.doing_pretrain = doing_pretrain
 		self.loading_pretrain = loading_pretrain
+		print("Working mode after reset:")
+		self.print_working_mode()
+
+	def print_working_mode(self):
+		print("Current working mode is:")
+		print("\t auto_run: {}".format{self.auto_run})
+		print("\t is_GAN: {}".format{self.is_GAN})
+		print("\t doing_pretrain: {}".format{self.doing_pretrain}))
+		print("\t loading_pretrain: {}".format{self.loading_pretrain}))
 
 
-	def execute_my_work_flow(self):
+
+	def execute_my_work_flow(self):	
 		if self.auto_run == True:
+			print("Doing auto_run!")
+			self.print_work_mode()
+			print("Split data!")
+			self.split_data()	
 			if self.is_GAN == False:
-				if self.doing_pretrain == True: 
+				if self.doing_pretrain == True:
+					print("\tWorking on pretrain only!") 
 					#use keras to train simple generator is is_Gan==False	
-					return self.pretrain(epochs=20)
+					return self.pretrain(epochs=paramters['train']['n_epochs_pretrain'])
 				else:
-					print("No work to do since to GAN and no pretrain requested.")
+					print("\tNo work to do since to GAN and no pretrain requested.")
 			elif self.is_GAN == True:
 				if self.doing_pretrain == True:
-					self.gen = self.pretrain(epochs=20) 
+					print("\tWorking on pretrain for GAN!")	
+					self.gen = self.pretrain(epochs=paramters['train']['n_epochs_pretrain']) 
 					print("Finished pretrain and start working on GAN.")
 						
 				elif self.loading_pretrain == True:
+					print("\tLoading pretrained weights for GAN!")
 					self.load_gen_weights(self.parameters['train']['gen_model_path'])
-					print("Loaded pretrain and start working on GAN.")
+					print("\tLoaded pretrain and start working on GAN.")
 				else:
-					print("WARNING!!!! Skip the pretrain and do the GAN directly!")	
+					print("\tWARNING!!!! Skip the pretrain and do the GAN directly!")
+				print("Pretrain part Done! Reset the work mode for real GAN!")
+				self.reset_working_mode(loading_pretrain=True)
 				#use train_step to train gen/disc if is_Gan==True and pretrain done!
-				return self.train_GAN(epochs=20)	
+				return self.train_GAN(epochs=paramters['train']['n_epochs_GAN'])	
 		else:
 			print("Auto run not setup, stop here and run manually!")
 			return
