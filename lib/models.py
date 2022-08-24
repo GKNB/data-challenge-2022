@@ -155,10 +155,10 @@ def pretrain(data_x, data_y, parameters):
 	adam = tf.keras.optimizers.Adam(learning_rate=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 	generator_model.compile(optimizer=adam, loss=losses.MeanSquaredError())
 	
-	logdir = paramters["output_folder"] + datetime.now().strftime("%Y%m%d-%H%M%S")
+	logdir = parameters["output_folder"] + datetime.now().strftime("%Y%m%d-%H%M%S")
 	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
 	
-	checkpoint_filepath = paramters["checkpoint_filepath"]
+	checkpoint_filepath = parameters["checkpoint_filepath"]
 	model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_filepath,\
 																	save_weights_only=True,\
 																	save_freq=10*40)
