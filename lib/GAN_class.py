@@ -131,10 +131,12 @@ class AWWSM4_SR_GAN:
 
 
 	def execute_my_work_flow(self):	
+		self.print_work_mode()
 		if self.auto_run == True:
-			print("Doing auto_run!")
-			self.print_work_mode()
-			print("Split data!")
+			print("Doing auto_run!")	
+			print("Loading data")
+			self.load_data() 
+			print("Spliting data!")
 			self.split_data()	
 			if self.is_GAN == False:
 				if self.doing_pretrain == True:
