@@ -148,6 +148,8 @@ class AWWSM4_SR_GAN:
 					print("\tWorking on pretrain for GAN!")	
 					self.gen = self.pretrain(epochs=paramters['train']['n_epochs_pretrain']) 
 					print("Finished pretrain and start working on GAN.")
+					print("Reset the work mode for real GAN!")
+					self.reset_working_mode(doing_pretrain=False)
 						
 				elif self.loading_pretrain == True:
 					print("\tLoading pretrained weights for GAN!")
@@ -155,8 +157,7 @@ class AWWSM4_SR_GAN:
 					print("\tLoaded pretrain and start working on GAN.")
 				else:
 					print("\tWARNING!!!! Skip the pretrain and do the GAN directly!")
-				print("Pretrain part Done! Reset the work mode for real GAN!")
-				self.reset_working_mode(loading_pretrain=True)
+				
 				#use train_step to train gen/disc if is_Gan==True and pretrain done!
 				return self.train_GAN(epochs=paramters['train']['n_epochs_GAN'])	
 		else:
