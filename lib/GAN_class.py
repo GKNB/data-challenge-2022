@@ -107,10 +107,10 @@ class AWWSM4_SR_GAN:
 
 
 	#Section for set working mode
-	def reset_working_mode(self, auto_run=self.auto_run, \
-								is_GAN=self.is_GAN, \
-								doing_pretrain=self.doing_pretrain, \
-								loading_pretrain=self.loading_pretrain):
+	def reset_working_mode(self, auto_run=False, \
+								is_GAN=True, \
+								doing_pretrain=False, \
+								loading_pretrain=True):
 		print("Reset the working mode!")
 		print("Working mode before reset:")
 		self.print_working_mode()
@@ -123,10 +123,10 @@ class AWWSM4_SR_GAN:
 
 	def print_working_mode(self):
 		print("Current working mode is:")
-		print("\t auto_run: {}".format{self.auto_run})
-		print("\t is_GAN: {}".format{self.is_GAN})
-		print("\t doing_pretrain: {}".format{self.doing_pretrain}))
-		print("\t loading_pretrain: {}".format{self.loading_pretrain}))
+		print("\t auto_run: {}".format(self.auto_run))
+		print("\t is_GAN: {}".format(self.is_GAN))
+		print("\t doing_pretrain: {}".format(self.doing_pretrain))
+		print("\t loading_pretrain: {}".format(self.loading_pretrain))
 
 
 
