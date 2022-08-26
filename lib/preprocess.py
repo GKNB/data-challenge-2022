@@ -269,7 +269,9 @@ def standardrize_dataset_GAN(data_set, target_data_list, stat_dim):
 	mean_dict = dict()	
 	stddev_dict = dict()
 	std_dict = dict()
+	raw_dict = dict()
 	for data_name in target_data_list:
+		raw_dict[data_name] = data_set[data_name].to_numpy()
 		print("\tStandardrizing data:%s" % data_name)
 		assert(check_data_shape_valid(data_set[data_name]))
 		#confirmed the mean and std is over all dimension, not only stat dimension	
@@ -283,12 +285,14 @@ def standardrize_dataset_GAN(data_set, target_data_list, stat_dim):
 	std_stacked = stack_data_set_datas(std_dict, target_data_list, "stdrzd")
 	mean_stacked = stack_data_set_datas(mean_dict, target_data_list, "mean")
 	stddev_stacked = stack_data_set_datas(stddev_dict, target_data_list, "std")
-	print("\tstacked: mean_shape:{}, stddev_shape:{}, std_shape:{}".format(mean_stacked.shape, stddev_stacked.shape, std_stacked.shape) )
+	print("\tStacking raw data: {}".format(target_data_list))
+	raw_stacked = stack_data_set_datas(raw_dict, target_data_list, "raw")
+	print("\tstacked: mean_shape:{}, stddev_shape:{}, std_shape:{}, raw_shape:{}".format(mean_stacked.shape, stddev_stacked.shape, std_stacked.shape, raw_stacked.shape) )
 	axis_idx_list = list(range(len(std_stacked.shape)))
 	del axis_idx_list[-1]
 	stat_axis_tuple = tuple(axis_idx_list)
 	print("\tstacked std stat(over all other dimensions {}): mean:{}, stddev:{}".format(stat_axis_tuple, std_stacked.mean(axis=stat_axis_tuple), std_stacked.std(axis=stat_axis_tuple)) )
-	return {"std":std_stacked, "mean":mean_stacked, "stddev":stddev_stacked}
+	return {"std":std_stacked, "mean":mean_stacked, "stddev":stddev_stacked, "raw":raw_stacked}
 
 
 
