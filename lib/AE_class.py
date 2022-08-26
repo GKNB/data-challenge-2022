@@ -37,8 +37,7 @@ class AWWSM4_HIER_AE:
 							parameters_data['file_format'], 
 							parameters_data['xy_keyword_dict'], 
 							parameters_data['xy_exclude_list'])
-		self.data_x = np.array(data_xy_dict['data_x'])
-		self.data_y = np.array(data_xy_dict['data_y'])
+		self.data_x = np.array(data_xy_dict['data_x'])	
 
 
 	def split_data(self, test_set_ratio=0.2, val_set_subratio=0.25,rdm_state=42):
