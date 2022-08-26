@@ -129,6 +129,7 @@ def discriminator(input_shape = (192, 192, 2)):
 
 
 # Autoencoder models
+## Basic elements of encoder and decoder
 def encoder(latent_dim, input_shape = (192, 192, 2)):
 	'''
 	return an encoder which encodes the input image into a latent vector with dimension latent_dim
@@ -212,3 +213,64 @@ def decoder(latent_dim):
 	
 	model = Model(inputs = X_input, outputs = X)
 	return model
+
+##hiearchical AE's
+class Autoencoder_hier_1(Model):
+	def __init__(self, encoder, decoder):
+		super(Autoencoder_hier_1, self).__init__() 
+		self.encoder = encoder
+		self.decoder = decoder
+	
+	def call(self, x):
+		encoded = self.encoder(x)
+		decoded = self.decoder(encoded)
+		return decoded 
+
+
+class Autoencoder_hier_2(Model):
+	def __init__(self, encoder, decoder, ae):
+		super(Autoencoder_hier_2, self).__init__() 
+		self.encoder = encoder
+		self.decoder = decoder
+		self.ae = ae
+		self.ae.trainable = False
+	
+	def call(self, x):
+		encoded = self.encoder(x)
+		latent_1 = self.ae.encoder(x)
+		latent_all = Concatenate(axis=-1)([encoded, latent_1])
+		decoded = self.decoder(latent_all)
+		return decoded
+
+class Autoencoder_hier_3(Model):
+	def __init__(self, encoder, decoder, ae):
+		super(Autoencoder_hier_3, self).__init__() 
+		self.encoder = encoder
+		self.decoder = decoder
+		self.ae = ae
+		self.ae.trainable = False
+	
+	def call(self, x):
+		encoded = self.encoder(x)
+		latent_1 = self.ae.ae.encoder(x)
+		latent_2 = self.ae.encoder(x)
+		latent_all = Concatenate(axis=-1)([encoded, latent_1, latent_2])
+		decoded = self.decoder(latent_all)
+		return decoded
+
+class Autoencoder_hier_4(Model):
+	def __init__(self, encoder, decoder, ae):
+		super(Autoencoder_hier_4, self).__init__() 
+		self.encoder = encoder
+		self.decoder = decoder
+		self.ae = ae
+		self.ae.trainable = False
+	
+	def call(self, x):
+		encoded = self.encoder(x)
+		latent_1 = self.ae.ae.ae.encoder(x)
+		latent_2 = self.ae.ae.encoder(x)
+		latent_3 = self.ae.encoder(x)
+		latent_all = Concatenate(axis=-1)([encoded, latent_1, latent_2, latent_3])
+		decoded = self.decoder(latent_all)
+		return decoded
