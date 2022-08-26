@@ -143,17 +143,6 @@ def save_dict_of_datasets(dict_of_datasets, output_folder, file_format):
 	else:
 		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
 
-def save_dict_of_datasets_h5(dict_of_datasets, output_folder, file_format, data_format):
-	#check if the output_folder exists
-	if os.path.exists(output_folder):	
-		output_path_format = output_folder+file_format+".h5"
-		with h5py.File(output_path_format, 'w') as hf:
-			for data_set_name in dict_of_datasets:
-				data_name = (data_format % data_set_name)
-				hf.create_dataset(data_name,  data=dict_of_datasets[data_set_name])
-				print("Saving data {} to h5 file {}".format(data_name, output_path_format))
-	else:
-		print("Output folder: {} doesn't it exist, create one before move on!".format(output_folder) )
 
 def save_standardrized_dict_of_datasets_h5(dict_of_std_datasets, output_folder, file_format, data_format):
 	#check if the output_folder exists
@@ -329,8 +318,7 @@ def data_preprocess(list_of_data_set_path, parameters):
 	dim_along = parameters["nan_dim_along"]
 	data_irrelevant = parameters["nan_data_irrelevant"]
 	output_folder = parameters["output_folder"] 
-	file_format =  parameters["file_format"]
-	noNAN_h5_file_format = parameters["noNAN_h5_file_format"]
+	file_format =  parameters["file_format"]	
 	dict_of_datasets = create_data_set_dict(list_of_data_set_path)
 	remove_nan(dict_of_datasets, dim_along, data_irrelevant)
 	#check if nan have been removed
@@ -339,8 +327,7 @@ def data_preprocess(list_of_data_set_path, parameters):
 		return
 	else:
 		print("NAN all get removed! Saving preprocessed data!")
-		save_dict_of_datasets(dict_of_datasets, output_folder, file_format)
-		save_dict_of_datasets_h5(dict_of_datasets, output_folder, noNAN_h5_file_format, data_format)
+		save_dict_of_datasets(dict_of_datasets, output_folder, file_format)	
 		check_NAN_IO = check_IO_dict_of_datasets(dict_of_datasets, output_folder, file_format)
 
 	#standardrize the data and save it
