@@ -26,6 +26,37 @@ class AWWSM4_HIER_AE:
 		self.latent_dim_en = parameters['train']['latent_dim_en'] 
 		self.latent_dim_de_origin = parameters['train']['latent_dim_de_origin']
 		self.log_format = parameters['train']['log_format']
+		self.self.batch_size = parameters['train']['batch_size']
+		self.epoch = parameters['train']['epoch'] 
+		self.shuffle = = parameters['train']['shuffle']
+
+
+	def load_data(self):
+		parameters_data = self.parameters['data']
+		data_xy_dict = get_data_xy_from_h5(parameters_data['output_folder'], 
+							parameters_data['file_format'], 
+							parameters_data['xy_keyword_dict'], 
+							parameters_data['xy_exclude_list'])
+		self.data_x = np.array(data_xy_dict['data_x'])
+		self.data_y = np.array(data_xy_dict['data_y'])
+
+
+	def split_data(self, test_set_ratio=0.2, val_set_subratio=0.25,rdm_state=42):
+		#First split data into train+validation and test set
+		self.X_train, self.X_test = \
+					train_test_split(self.data_x, 
+												test_size=test_set_ratio, random_state=rdm_state)
+
+		#Next split training again into train and validation
+		self.X_train, self.X_val = \
+					train_test_split(self.X_train, self.y_train, 
+												test_size=val_set_subratio, random_state=rdm_state)
+		print("X_train.shape: {}".format(self.X_train.shape) )
+		print("X_val.shape: {}".format(self.X_val.shape) )
+		print("X_test.shape: {}".format(self.X_test.shape) )	
+
+		print(np.max(self.X_train), np.max(self.X_val), np.max(self.X_test), np.min(self.X_train), np.min(self.X_val), np.min(self.X_test))	
+
 
 	def	generate_AE_one_by_one(self):
 		for i_AE in range(self.n_sub_net):
