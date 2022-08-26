@@ -128,15 +128,87 @@ def discriminator(input_shape = (192, 192, 2)):
 
 
 
+# Autoencoder models
+def encoder(latent_dim, input_shape = (192, 192, 2)):
+	'''
+	return an encoder which encodes the input image into a latent vector with dimension latent_dim
+	'''
+	
+	X_input = Input(input_shape)
+	
+	#FIXME Should we add BN layer? I currently add that between conv and relu for the first 4 sets of layers
+	X = Conv2D(filters=16, kernel_size=(3,3), strides=(1,1), padding="same")(X_input)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	X = MaxPooling2D(pool_size=(2, 2), padding="same")(X)
+	
+	X = Conv2D(filters=16, kernel_size=(3,3), strides=(1,1), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	X = MaxPooling2D(pool_size=(2, 2), padding="same")(X)
+	
+	X = Conv2D(filters=32, kernel_size=(3,3), strides=(1,1), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	X = MaxPooling2D(pool_size=(2, 2), padding="same")(X)
+	
+	X = Conv2D(filters=32, kernel_size=(3,3), strides=(1,1), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	X = MaxPooling2D(pool_size=(2, 2), padding="same")(X)
+	
+	#FIXME Should we add some dropout layer to regularize the model? 
+	#I didn't do that, but need to look at train/val error
+	
+	X = Conv2D(filters=64, kernel_size=(3,3), strides=(1,1), padding="same")(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	X = MaxPooling2D(pool_size=(2, 2), padding="same")(X)
+	
+	X = Conv2D(filters=64, kernel_size=(3,3), strides=(1,1), padding="same")(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	X = MaxPooling2D(pool_size=(2, 2), padding="same")(X)
+	
+	X = Flatten()(X)
+	X = Dense(units=latent_dim)(X)
+	#FIXME Should we add an activation layer here? I didn't do it
+	
+	model = Model(inputs = X_input, outputs = X)
+	return model
 
 
-
-
-
-
-
-
-
-
-
-
+def decoder(latent_dim):
+	'''
+	return an encoder which encodes the input image into a latent vector with dimension latent_dim
+	'''
+	
+	X_input = Input((latent_dim))
+	
+	X = Dense(units=3*3*64, input_dim=latent_dim)(X_input)
+	X = Reshape((3,3,64))(X)
+	
+	X = Conv2DTranspose(filters=64, kernel_size=(3,3), strides=(2,2), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	
+	X = Conv2DTranspose(filters=64, kernel_size=(3,3), strides=(2,2), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	
+	X = Conv2DTranspose(filters=32, kernel_size=(3,3), strides=(2,2), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	
+	X = Conv2DTranspose(filters=32, kernel_size=(3,3), strides=(2,2), padding="same")(X)
+	X = BatchNormalization()(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	
+	X = Conv2DTranspose(filters=16, kernel_size=(3,3), strides=(2,2), padding="same")(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	
+	X = Conv2DTranspose(filters=16, kernel_size=(3,3), strides=(2,2), padding="same")(X)
+	X = LeakyReLU(alpha=0.2)(X)
+	
+	X = Conv2D(filters=2, kernel_size=(3,3), strides=(1,1), padding="same")(X)    
+	
+	model = Model(inputs = X_input, outputs = X)
+	return model
