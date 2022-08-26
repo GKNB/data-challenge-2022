@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers, losses
-from tensorflow.keras.layers import Input, Lambda, LeakyReLU, Add, Dense, Activation, Flatten, Conv2D, Conv2DTranspose, MaxPooling2D
+from tensorflow.keras.layers import Input, Lambda, LeakyReLU, Add, Dense, Activation, Flatten, Conv2D, Conv2DTranspose, MaxPooling2D, BatchNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras.initializers import glorot_uniform, constant, TruncatedNormal
 import tensorflow as tf
@@ -72,7 +72,7 @@ class AWWSM4_HIER_AE:
 			create_encoder_cmd = "%s = encoder(%d)" % \
 									(encoder_name, latent_dim_en_i)	
 			print("Executing: "+create_encoder_cmd)
-			##exec(create_encoder_cmd)
+			exec(create_encoder_cmd)
 			print_encoder_cmd = "print(%s.summary())" % encoder_name	
 			print("Executing: "+print_encoder_cmd)
 			##exec(print_encoder_cmd)
