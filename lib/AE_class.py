@@ -108,7 +108,7 @@ class AWWSM4_HIER_AE:
 			print("Executing: " + compile_HIER_AE_cmd)	
 			exec(compile_HIER_AE_cmd)
 			#steps to do
-			logdir =  self.log_path_file_format % HIER_AE_name_now + datetime.now().strftime('%Y%m%d-%H%M%S')
+			logdir =  self.log_path_file_format % HIER_AE_name_now +"/" +datetime.now().strftime('%Y%m%d-%H%M%S')
 			tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
 
 			checkpoint_filepath = 'autoencoder_%d_hier_%d/ckp/'  % (latent_dim_en_i, n_AE)
