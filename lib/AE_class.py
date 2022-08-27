@@ -136,11 +136,11 @@ class AWWSM4_HIER_AE:
 			if i_AE > 0:
 				test_prev_cmd = "%s.evaluate(self.X_test, self.X_test)" % HIER_AE_name_prev
 				print("Executing: " + test_prev_cmd)
-				##exec(test_prev_cmd)	
+				exec(test_prev_cmd)	
 				
 			test_now_cmd = "%s.evaluate(self.X_test, self.X_test)" % HIER_AE_name_now
 			print("Executing: " + test_now_cmd)
-			##exec(test_now_cmd)	
+			exec(test_now_cmd)	
 			#end of this round: update the prev HIER
 			print("The %dth round of AE done! Update the prev HIER to be the current HIER!" % n_AE)
 			HIER_AE_name_prev = HIER_AE_name_now
