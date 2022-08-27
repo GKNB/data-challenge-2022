@@ -21,13 +21,17 @@ from copy import deepcopy
 
 class AWWSM4_HIER_AE:
 	def __init__(self, parameters=dict()):
+		print("Initializing AWWSM4_HIER_AE with parameters:\n{}".format(parameters))
 		self.list_of_AE = list()	
 		self.n_sub_net = parameters['train']['n_sub_net']	
 		self.latent_dim_en = parameters['train']['latent_dim_en'] 
 		self.latent_dim_de_origin = parameters['train']['latent_dim_de_origin']
-		self.log_format = parameters['train']['log_format']
+		self.log_path_file_format = parameters['train']['log_path_file_format']
 		self.batch_size = parameters['train']['batch_size']
-		self.epochs = parameters['train']['epochs'] 
+		self.sub_net_epochs = parameters['train']['sub_net_epochs'] 
+		if len(self.sub_net_epochs) != self.n_sub_net:
+			print("Error! Need to have 1-to-1 correspondance on epoch values for each sub_net!")
+			assert(False)
 		self.shuffle = parameters['train']['shuffle']
 		self.parameters = deepcopy(parameters)
 
@@ -104,7 +108,7 @@ class AWWSM4_HIER_AE:
 			print("Executing: " + compile_HIER_AE_cmd)	
 			exec(compile_HIER_AE_cmd)
 			#steps to do
-			logdir = 'autoencoder_%d_hier_%d/' % (latent_dim_en_i, n_AE) + datetime.now().strftime('%Y%m%d-%H%M%S')
+			logdir =  self.log_path_file_format % HIER_AE_name_now + datetime.now().strftime('%Y%m%d-%H%M%S')
 			tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
 
 			checkpoint_filepath = 'autoencoder_%d_hier_%d/ckp/'  % (latent_dim_en_i, n_AE)
@@ -118,7 +122,7 @@ class AWWSM4_HIER_AE:
 			fit_cmd = "autoencoder_%d_hier_%d.fit" % (latent_dim_en_i, n_AE)
 			arguments_cmd_p1 = "(self.X_train, self.X_train,"
 			arguments_cmd_p2 = "batch_size={}, epochs={}, shuffle={},".format(self.batch_size, 
-																		self.epochs, self.shuffle)
+																		self.sub_net_epochs[i_AE], self.shuffle)
 			arguments_cmd_p3 = "validation_data=(self.X_val, self.X_val), "
 			arguments_cmd_p4 = "callbacks=[tensorboard_callback, model_checkpoint_callback])"
             
