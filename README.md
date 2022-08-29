@@ -1,5 +1,5 @@
 # data-challenge-2022
-This is a library for SMC data challenge 2022, Challenge 3. The functions can be found in folder ```./lib```:
+This is a library for SMC data challenge 2022, Challenge 3. The functions can be found in folder ```./lib```:   
 	- ```preprocess.py``` contains the functions for data IO and pre-processing.
 	- ```models.py``` contains the model definitions used in hierachical autoencoder (HIER-AE) and generative adversarial network (GAN).
 	- ```GAN_class.py``` contains the definition and functions used for GAN training.
